@@ -90,12 +90,13 @@ Bubloo differs from classic baby trackers in four ways:
 ### Feature 2: Current State Card
 
 - A calm summary of the baby's current known state
-- Prioritizes latest feed, latest sleep start or wake, latest diaper, recent notes, and reassurance copy
+- Prioritizes latest feed, current sleep status, latest diaper, recent note, and reassurance copy
 
 ### Feature 3: AI Handoff Summary
 
-- Generates a handoff card for the next caregiver
-- Highlights the most relevant recent events, watch-for context, and suggested next step
+- Uses Codex as the interpretation engine behind the handoff experience
+- Generates a caregiver-ready handoff card for the next caregiver
+- Turns sparse recent logs into a calm summary, what to keep in mind today, a suggested next step, and clear supporting context
 
 ### Feature 4: Calm Copy System
 
@@ -123,18 +124,17 @@ Bubloo differs from classic baby trackers in four ways:
   - Note
 - Current state card showing:
   - Last feed
-  - Last sleep start
-  - Last wake
-  - Whether the baby is likely asleep now
+  - Sleep status
   - Most recent diaper
-  - Recent notes
+  - Recent note
   - Calm reassurance copy
 - Handoff summary generator showing:
-  - Headline
-  - Recent timeline
-  - Watch-for items
+  - Codex-generated headline and summary
+  - What to keep in mind today
   - Suggested next step
+  - Why this summary
   - On-screen handoff card readable in one view
+  - Optional copy-to-clipboard action
 - Seed data or sample flow for demo use without accounts
 
 ### Out of Scope
@@ -165,22 +165,17 @@ Recommended information architecture:
 2. Current State Card
    - Current state at a glance
    - Last feed
-   - Last sleep start
-   - Last wake
+   - Sleep status
    - Last diaper
-   - Recent note snippet
-   - Calm reassurance line
+   - Recent note
 3. Quick Log Actions
    - Feed
    - Sleep
    - Wake
    - Diaper
    - Note
-4. Recent Timeline Preview
-   - Last 3 to 5 key events
-5. Handoff CTA
-   - `Create handoff`
-   - Short copy explaining that this is enough for the next caregiver
+4. Reassurance line
+   - Calm copy such as "Today, this is enough."
 
 Sparse or empty states should still feel calm and usable, not blank or punitive.
 
@@ -194,12 +189,14 @@ Sparse or empty states should still feel calm and usable, not blank or punitive.
 
 ### Handoff Summary
 
-- Short headline
-- Recent timeline
-- Watch for
+- Codex-generated headline
+- Calm summary paragraph
+- What to keep in mind today
 - Suggested next step
+- Why this summary
+- Copy handoff action
+- Refresh with latest logs action
 - On-screen card layout readable in under 10 seconds
-- Optional copy-to-clipboard action
 
 ## 13. Functional Requirements
 
@@ -215,18 +212,21 @@ Sparse or empty states should still feel calm and usable, not blank or punitive.
 
 - The system must summarize the current state from logs in the last 6 hours
 - The summary must still work when some data is missing
-- The summary should prioritize the latest known feed, sleep start, wake, diaper, and recent notes
+- The summary should prioritize the latest known feed, current sleep status, latest diaper, and recent note
+- The current-state surface should remain minimal and glanceable rather than behaving like a timeline or dashboard
 - The system should avoid guessing unknown facts and summarize only what is supported by logs
 - The output should be primarily sentence-based or card-based, not a numeric table
 
 ### FR3. Handoff Summary
 
 - The system must generate a caregiver handoff summary from logs in the last 8 hours
-- The summary must include up to 5 key events in the recent timeline
-- The summary must include the latest feed, recent sleep context, recent diaper context, notes, watch-for items, and a suggested next step
+- The handoff summary must use Codex as the core interpretation engine
+- The summary must include a concise caregiver-ready summary, `what to keep in mind today`, one suggested next step, and a short `why this summary` explanation
+- The summary may include up to 3 source-context items to show why Codex produced the handoff
 - Free-form notes must influence the summary when present
 - The handoff summary should be readable on a single mobile screen without external sharing
 - The summary should remain useful even when only 2 to 3 logs are available
+- The system must not invent unsupported facts; any practical handoff notes should come from explicit notes or highly reliable recent context
 
 ### FR4. Calm Tone
 
@@ -259,31 +259,38 @@ interface CurrentBabyState {
   lastWake?: CareLogEntry;
   lastDiaper?: CareLogEntry;
   isLikelySleeping?: boolean;
+  sleepStatusText: string;
   recentNotes: CareLogEntry[];
   reassuranceText: string;
 }
 
 interface HandoffSummary {
   headline: string;
-  recentTimeline: string[];
-  watchFor: string[];
+  summaryText: string;
+  keepInMindToday: string[];
+  whyThisSummary: string[];
   suggestedNextStep: string;
+  copyText?: string;
 }
 ```
 
 ## 15. AI / Codex Responsibilities
 
-AI is not a general chatbot in Bubloo. It is the summary engine.
+Codex is not a general chatbot in Bubloo. It is the core interpretation engine behind the handoff experience.
 
-AI should:
+Codex should:
 
 - Read sparse care logs and generate a current-state summary using the last 6 hours of logs
 - Generate caregiver handoff summaries using the last 8 hours of logs
-- Pull key watch-for details from free-form notes
+- Decide what matters most to the next caregiver
+- Pull key handoff notes from free-form notes
+- Generate `what to keep in mind today` guidance in a calm tone
+- Generate one suggested next step that stays non-medical
+- Explain why the summary was produced by surfacing a few key source-context items
 - Highlight only known information rather than inventing missing context
 - Rewrite outputs in a calm, low-anxiety tone
 
-AI should not:
+Codex should not:
 
 - Diagnose
 - Assess danger or risk clinically
@@ -325,12 +332,13 @@ Demo flow:
 3. Parent A adds a note: "A little fussy before falling asleep"
 4. Parent A taps `Sleep`
 5. The home screen shows the current state card
-6. The user taps `Create handoff`
-7. Parent B reads and understands the summary in under 10 seconds
+6. Parent B opens the `Handoff` tab
+7. Codex generates a calm caregiver-ready handoff
+8. Parent B reads and understands the summary in under 10 seconds
 
 Example summary:
 
-"Bubloo update: last fed 40 minutes ago, diaper changed recently, baby fell asleep after being a little fussy. Watch for: may wake soon, keep an eye on fussiness. Next step: if awake, offer soothing before next feed."
+"Bubloo update: recently fed, diaper changed, and baby fell asleep after being a little fussy. What to keep in mind today: may wake soon, soothing may help first. Next step: if awake, soothe first and then prepare for the next feed."
 
 ## 18. Success Metrics
 
@@ -341,6 +349,7 @@ Hackathon demo success:
 - A handoff summary can be understood in under 10 seconds
 - The product still feels useful with only a few records
 - Observers react with "this is more than a tracker"
+- The Codex-powered handoff clearly feels like the core value of the product
 
 ## 19. Acceptance Criteria
 
@@ -351,6 +360,8 @@ Hackathon demo success:
 - The app behaves gracefully with missing data
 - With only 2 to 3 logs, the app still produces a natural summary
 - The handoff card fits in a single mobile view
+- The handoff includes `what to keep in mind today` and a single suggested next step
+- The handoff includes a short explanation of why Codex produced that summary
 - Summary output does not include diagnostic or medical advice
 - Missing data states use gentle reassurance copy rather than warning language
 - The demo works without external integrations
@@ -371,7 +382,7 @@ Mitigation:
 Mitigation:
 
 - Make note content visibly influence output
-- Use concrete recent events in the summary
+- Use concrete recent events and handoff notes in the summary
 - Keep the structure opinionated and handoff-focused
 
 ### Risk: Tone feels managerial instead of calming
@@ -393,7 +404,8 @@ Mitigation:
 - Landing page
 - Quick log UI
 - Current state card
-- Handoff summary generation logic
+- Codex-powered handoff summary generation logic
+- Handoff explanation and `what to keep in mind today` logic
 - Calm copy refinement
 - Basic tests
 - Demo seed data and demo script
