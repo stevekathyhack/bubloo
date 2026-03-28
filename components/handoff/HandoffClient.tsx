@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { BublooShell } from "@/components/BublooShell";
 import { useBubloo } from "@/components/BublooProvider";
@@ -25,7 +25,8 @@ async function requestHandoff(deviceId: string, logs: unknown[]): Promise<Handof
 }
 
 async function fetchLatestHandoff(deviceId: string): Promise<Handoff | null> {
-  const response = await fetch(`/api/handoff/latest?device_id=${deviceId}`, {
+  const params = new URLSearchParams({ device_id: deviceId });
+  const response = await fetch(`/api/handoff/latest?${params.toString()}`, {
     cache: "no-store",
   });
 
@@ -34,6 +35,8 @@ async function fetchLatestHandoff(deviceId: string): Promise<Handoff | null> {
   const payload = (await response.json()) as LatestHandoffResponse;
   return payload.handoff ?? null;
 }
+
+const CAREGIVERS = ["Mother", "Father", "Nanny", "Grandma", "Grandpa"] as const;
 
 export function HandoffClient() {
   const { deviceId, isHydrated, logs } = useBubloo();
@@ -44,6 +47,13 @@ export function HandoffClient() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const lastLoadKeyRef = useRef<string | null>(null);
+  const [toCaregiver, setToCaregiver] = useState<string>("Mother");
+  const [showPicker, setShowPicker] = useState(false);
+
+  const selectCaregiver = useCallback((name: string) => {
+    setToCaregiver(name);
+    setShowPicker(false);
+  }, []);
 
   useEffect(() => {
     if (!isHydrated || !deviceId) {
@@ -82,23 +92,9 @@ export function HandoffClient() {
 
       if (!isActive) return;
 
-      // Try server-side generation (sends logs so server has data)
-      try {
-        const generated = await requestHandoff(deviceId!, logs);
-        if (isActive) {
-          setHandoff(generated);
-          setStatus("ready");
-          return;
-        }
-      } catch {
-        // Server failed — fall back to client-side generation
-      }
-
-      if (!isActive) return;
-
-      // Client-side fallback — always works
-      const fallback = buildClientHandoff(logs, deviceId!);
-      setHandoff(fallback);
+      // Use client-side generation with full log history for comparison
+      const generated = buildClientHandoff(logs, deviceId!);
+      setHandoff(generated);
       setStatus("ready");
     }
 
@@ -108,23 +104,16 @@ export function HandoffClient() {
     };
   }, [deviceId, isHydrated, logs]);
 
-  async function refresh() {
+  function refresh() {
     if (!deviceId) return;
 
     setStatus("refreshing");
     setError(null);
     setCopied(false);
 
-    try {
-      const generated = await requestHandoff(deviceId, logs);
-      setHandoff(generated);
-      setStatus("ready");
-    } catch {
-      // Fallback to client-side
-      const fallback = buildClientHandoff(logs, deviceId);
-      setHandoff(fallback);
-      setStatus("ready");
-    }
+    const generated = buildClientHandoff(logs, deviceId);
+    setHandoff(generated);
+    setStatus("ready");
   }
 
   async function handleCopy() {
@@ -135,21 +124,7 @@ export function HandoffClient() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2200);
     } catch {
-      // Fallback for environments where clipboard API is blocked
-      try {
-        const textarea = document.createElement("textarea");
-        textarea.value = handoff.copy_text;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-        setCopied(true);
-        window.setTimeout(() => setCopied(false), 2200);
-      } catch {
-        setError("Copying did not work just now.");
-      }
+      setError("Long-press the summary text to copy it manually.");
     }
   }
 
@@ -162,6 +137,35 @@ export function HandoffClient() {
         </p>
       </header>
 
+      <div className="handoff-to-section">
+        <button
+          type="button"
+          className="handoff-to-badge"
+          onClick={() => setShowPicker(!showPicker)}
+        >
+          <span>to <strong>{toCaregiver}</strong></span>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className="handoff-to-chevron">
+            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        {showPicker ? (
+          <div className="handoff-picker">
+            {CAREGIVERS.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className={`handoff-picker-option${name === toCaregiver ? " handoff-picker-option--active" : ""}`}
+                onClick={() => selectCaregiver(name)}
+              >
+                <div className="handoff-picker-avatar">{name.charAt(0)}</div>
+                {name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
       {(!isHydrated || status === "loading") && !handoff ? (
         <div className="loading-shimmer" />
       ) : null}
@@ -173,6 +177,7 @@ export function HandoffClient() {
           copied={copied}
           onCopy={handleCopy}
           onRefresh={() => void refresh()}
+          fromCaregiver={{ name: "Nanny" }}
         />
       ) : null}
 

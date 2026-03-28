@@ -107,7 +107,7 @@ async function loadLogsFromServer(deviceId: string): Promise<CareLogEntry[] | nu
 
   const search = new URLSearchParams({
     device_id: deviceId,
-    range: "8h",
+    range: "48h",
     limit: "50",
     offset: "0",
   });
@@ -136,6 +136,13 @@ export function BublooProvider({ children }: { children: ReactNode }) {
     let isActive = true;
 
     async function hydrate() {
+      // Force reset via ?reset=1 URL param
+      if (new URLSearchParams(window.location.search).has("reset")) {
+        window.localStorage.clear();
+        try { await fetch("/api/reset", { method: "POST" }); } catch { /* ignore */ }
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+
       const nextDeviceId = ensureDeviceId();
       const storedLogs = parseStoredLogs(window.localStorage.getItem(LOG_STORAGE_KEY));
       let nextLogs = storedLogs;
@@ -159,7 +166,7 @@ export function BublooProvider({ children }: { children: ReactNode }) {
 
       try {
         await syncLogsToServer(nextDeviceId, nextLogs);
-        lastSyncedSignatureRef.current = `${nextDeviceId}:${JSON.stringify(nextLogs)}`;
+        lastSyncedSignatureRef.current = `${nextDeviceId}:${nextLogs.length}:${nextLogs[0]?.id ?? ""}`;
       } catch (error) {
         console.error("Unable to sync Bubloo logs during hydration.", error);
       }
@@ -186,7 +193,7 @@ export function BublooProvider({ children }: { children: ReactNode }) {
 
     window.localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
 
-    const signature = `${deviceId}:${JSON.stringify(logs)}`;
+    const signature = `${deviceId}:${logs.length}:${logs[0]?.id ?? ""}`;
     if (lastSyncedSignatureRef.current === signature) {
       return;
     }

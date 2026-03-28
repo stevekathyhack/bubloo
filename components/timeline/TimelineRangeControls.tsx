@@ -1,6 +1,6 @@
 import type { TimelineRange } from "../../lib/bubloo/types";
 
-const RANGES: TimelineRange[] = ["3h", "6h", "8h"];
+const RANGES: TimelineRange[] = ["12h", "24h", "48h"];
 
 export function TimelineRangeControls({
   value,

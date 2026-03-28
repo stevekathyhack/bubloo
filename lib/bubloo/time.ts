@@ -1,11 +1,11 @@
 import type { TimelineRange } from "./types";
 
 export function parseTimelineRange(input?: string | null): TimelineRange {
-  if (input === "3h" || input === "8h") {
+  if (input === "12h" || input === "48h") {
     return input;
   }
 
-  return "6h";
+  return "24h";
 }
 
 export function rangeToHours(range: TimelineRange): number {

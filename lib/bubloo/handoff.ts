@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import OpenAI from "openai";
 import { DEMO_DEVICE_ID } from "./constants";
 import { formatElapsedDuration, formatRelativeTime } from "./time";
-import { getRecentCareLogs, saveHandoffRecord } from "./store";
+import { getRecentCareLogs, readPersistedCareLogs, getSeedLogs, saveHandoffRecord } from "./store";
 import type { CareLogEntry, Handoff, HandoffDraft } from "./types";
 
 const CARE_LOG_TYPES = new Set(["feeding", "sleep_start", "wake", "diaper", "note"]);
@@ -134,14 +134,60 @@ function sentenceJoin(parts: string[]): string {
   return `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}`;
 }
 
+function splitByDay(allLogs: CareLogEntry[], now: Date) {
+  const todayStart = now.getTime() - 8 * 60 * 60_000;
+  const today = allLogs.filter((l) => new Date(l.timestamp).getTime() >= todayStart);
+  const history = allLogs.filter((l) => new Date(l.timestamp).getTime() < todayStart);
+  return { today, history };
+}
+
+function avgFeedMl(logs: CareLogEntry[]): number {
+  const feeds = logs.filter((l) => l.type === "feeding" && l.amount_ml && l.amount_ml > 0);
+  if (feeds.length === 0) return 0;
+  return Math.round(feeds.reduce((sum, f) => sum + (f.amount_ml ?? 0), 0) / feeds.length);
+}
+
+function totalSleepMinutes(logs: CareLogEntry[], now: Date): number {
+  const starts = logs.filter((l) => l.type === "sleep_start")
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const wakes = logs.filter((l) => l.type === "wake")
+    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  let total = 0;
+  for (const s of starts) {
+    const sTime = new Date(s.timestamp).getTime();
+    const w = wakes.find((w) => new Date(w.timestamp).getTime() > sTime);
+    total += Math.round(((w ? new Date(w.timestamp).getTime() : now.getTime()) - sTime) / 60_000);
+  }
+  return total;
+}
+
+function dailySleepAvgMinutes(history: CareLogEntry[], now: Date): number {
+  if (history.length === 0) return 0;
+  const oldest = new Date(history[history.length - 1].timestamp).getTime();
+  const days = Math.max(1, Math.round((now.getTime() - oldest) / (24 * 60 * 60_000)));
+  const total = totalSleepMinutes(history, now);
+  return Math.round(total / days);
+}
+
+function fmtDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}
+
 export function buildFallbackHandoffDraft(
-  logs: CareLogEntry[],
+  recentLogs: CareLogEntry[],
   now = new Date(),
+  allLogs?: CareLogEntry[],
 ): HandoffDraft {
-  const lastFeed = findLatest(logs, "feeding");
-  const lastDiaper = findLatest(logs, "diaper");
+  const all = allLogs ?? recentLogs;
+  const { today, history } = splitByDay(all, now);
+  const logs = today.length > 0 ? today : recentLogs;
+
   const recentNote = findLatest(logs, "note");
-  const { isSleeping, lastSleepStart, lastWake } = getSleepContext(logs);
+  const { isSleeping, lastSleepStart } = getSleepContext(logs);
   const normalizedNote = normalizeNote(recentNote?.note);
 
   if (logs.length === 0) {
@@ -158,64 +204,75 @@ export function buildFallbackHandoffDraft(
     };
   }
 
-  const summaryFacts: string[] = [];
-  if (lastFeed) {
-    summaryFacts.push("a recent feed was logged");
-  }
-  if (lastDiaper) {
-    summaryFacts.push("a diaper change was logged");
-  }
-  if (isSleeping && lastSleepStart) {
-    summaryFacts.push("baby is now asleep");
-  } else if (lastWake) {
-    summaryFacts.push("baby is awake right now");
+  // --- Feeding analysis (today vs 3-day avg) ---
+  const todayAvgMl = avgFeedMl(logs);
+  const histAvgMl = avgFeedMl(history);
+  const feedDiff = histAvgMl > 0 ? histAvgMl - todayAvgMl : 0;
+
+  // --- Sleep analysis (today vs daily avg) ---
+  const todaySleepMin = totalSleepMinutes(logs, now);
+  const histDailySleepMin = dailySleepAvgMinutes(history, now);
+  // Scale historical daily avg to 8h window for fair comparison
+  const histWindowSleepMin = histDailySleepMin > 0 ? Math.round(histDailySleepMin / 3) : 0;
+  const sleepDiffMin = histWindowSleepMin > 0 ? Math.max(0, histWindowSleepMin - todaySleepMin) : 0;
+
+  const summaryParts: string[] = [];
+
+  // Feeding
+  if (todayAvgMl > 0 && feedDiff > 10) {
+    summaryParts.push(
+      `Feeding intake is ${feedDiff} mL lower than the 3-day average (${todayAvgMl} mL vs. usual ${histAvgMl} mL).`,
+    );
+  } else if (todayAvgMl > 0 && histAvgMl > 0) {
+    summaryParts.push(
+      `Feeding intake is on track at ${todayAvgMl} mL per feed (3-day avg: ${histAvgMl} mL).`,
+    );
+  } else if (todayAvgMl > 0) {
+    summaryParts.push(`Latest feed was ${todayAvgMl} mL.`);
   }
 
-  const summaryCore = sentenceJoin(summaryFacts);
+  // Sleep
+  if (sleepDiffMin > 15) {
+    summaryParts.push(
+      `Sleep is about ${fmtDuration(sleepDiffMin)} less than usual in this window (${fmtDuration(todaySleepMin)} vs. avg ${fmtDuration(histWindowSleepMin)}).`,
+    );
+  } else if (todaySleepMin > 0 && histWindowSleepMin > 0) {
+    summaryParts.push(
+      `Sleep is within the normal range (${fmtDuration(todaySleepMin)} in this window).`,
+    );
+  }
+
+  // Note
+  if (normalizedNote) {
+    summaryParts.push(`Behavioral note: "${normalizedNote}."`);
+  }
+
   const summaryText =
-    summaryCore.length > 0
-      ? `${summaryCore.charAt(0).toUpperCase()}${summaryCore.slice(1)}.${
-          normalizedNote
-            ? ` A recent note mentioned ${lowerFirst(normalizedNote)}.`
-            : ""
-        }`
-      : normalizedNote
-        ? `A recent note mentioned ${lowerFirst(normalizedNote)}.`
-        : "A few recent notes give the next caregiver a calm starting point.";
+    summaryParts.length > 0
+      ? summaryParts.join(" ")
+      : "A few recent notes give the next caregiver a calm starting point.";
 
   const keepInMind: string[] = [];
+  if (feedDiff > 10 && histAvgMl > 0) {
+    keepInMind.push(`Feeding is ${feedDiff} mL below the 3-day average of ${histAvgMl} mL — may want to offer again soon.`);
+  }
+  if (sleepDiffMin > 15) {
+    keepInMind.push(`Sleep deficit of ~${fmtDuration(sleepDiffMin)} compared to the recent pattern — baby may be overtired.`);
+  }
+  if (isSleeping && lastSleepStart) {
+    keepInMind.push(`Currently asleep for ${formatElapsedDuration(lastSleepStart.timestamp, now)}.`);
+  }
   if (normalizedNote) {
     keepInMind.push(normalizedNote);
   }
-  if (isSleeping && lastSleepStart) {
-    keepInMind.push(
-      `Sleeping for about ${formatElapsedDuration(lastSleepStart.timestamp, now)} so far.`,
-    );
-  } else if (lastWake) {
-    keepInMind.push(`Awake for about ${formatElapsedDuration(lastWake.timestamp, now)}.`);
-  }
-  if (lastFeed) {
-    keepInMind.push(`Last feed was ${formatRelativeTime(lastFeed.timestamp, now)}.`);
-  }
-  if (lastDiaper) {
-    keepInMind.push(`Last diaper change was ${formatRelativeTime(lastDiaper.timestamp, now)}.`);
-  }
 
   const whyThisSummary: string[] = [];
-  if (lastFeed) {
-    whyThisSummary.push(`Last feed: ${formatRelativeTime(lastFeed.timestamp, now)}`);
+  if (todayAvgMl > 0) {
+    whyThisSummary.push(`Today avg feed: ${todayAvgMl} mL${histAvgMl > 0 ? ` (3-day avg: ${histAvgMl} mL)` : ""}`);
   }
-  if (lastSleepStart) {
-    whyThisSummary.push(`Sleep started: ${formatRelativeTime(lastSleepStart.timestamp, now)}`);
-  } else if (lastWake) {
-    whyThisSummary.push(`Last wake: ${formatRelativeTime(lastWake.timestamp, now)}`);
+  if (todaySleepMin > 0) {
+    whyThisSummary.push(`Sleep this window: ${fmtDuration(todaySleepMin)}${histWindowSleepMin > 0 ? ` (avg: ${fmtDuration(histWindowSleepMin)})` : ""}`);
   }
-  if (normalizedNote) {
-    whyThisSummary.push(`Recent note: ${lowerFirst(normalizedNote)}`);
-  } else if (lastDiaper) {
-    whyThisSummary.push(`Last diaper: ${formatRelativeTime(lastDiaper.timestamp, now)}`);
-  }
-
   return {
     headline: "Bubloo update",
     summary_text: summaryText,
@@ -420,7 +477,17 @@ export async function generateAndPersistHandoff(
           offset: 0,
           now,
         });
-  const fallbackDraft = buildFallbackHandoffDraft(logs, now);
+  // Fetch all historical logs for comparison
+  let allLogs: CareLogEntry[];
+  try {
+    const persisted = await readPersistedCareLogs();
+    const deviceLogs = persisted.filter((l) => l.device_id === deviceId);
+    allLogs = deviceLogs.length > 0 ? deviceLogs : getSeedLogs(now, deviceId);
+  } catch {
+    allLogs = logs;
+  }
+
+  const fallbackDraft = buildFallbackHandoffDraft(logs, now, allLogs);
 
   let draft = fallbackDraft;
 

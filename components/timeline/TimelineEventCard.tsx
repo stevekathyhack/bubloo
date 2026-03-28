@@ -1,4 +1,4 @@
-import { formatClockTime, formatRelativeTime } from "../../lib/bubloo/time";
+import { formatClockTime } from "../../lib/bubloo/time";
 import { getLogTypeLabel, getTimelineDetail } from "../../lib/bubloo/timeline";
 import type { CareLogEntry } from "../../lib/bubloo/types";
 import { IconDiaper, IconFeed, IconMoon, IconNote, IconSun } from "../icons";
@@ -16,7 +16,7 @@ export function TimelineEventCard({
 }: {
   log: CareLogEntry;
 }) {
-  const relativeTime = formatRelativeTime(log.timestamp);
+  const clockTime = formatClockTime(log.timestamp);
 
   return (
     <article className="timeline-card">
@@ -30,7 +30,7 @@ export function TimelineEventCard({
           <span className={`timeline-type-pill timeline-type-pill--${log.type}`}>
             {getLogTypeLabel(log.type)}
           </span>
-          <span className="timeline-title">{relativeTime}</span>
+          <span className="timeline-title">{clockTime}</span>
         </div>
         <p className="timeline-detail">{getTimelineDetail(log)}</p>
       </div>

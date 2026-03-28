@@ -12,14 +12,14 @@ import { TimelineList } from "./TimelineList";
 import { TimelineRangeControls } from "./TimelineRangeControls";
 
 const RANGE_TO_HOURS: Record<TimelineRange, number> = {
-  "3h": 3,
-  "6h": 6,
-  "8h": 8,
+  "12h": 12,
+  "24h": 24,
+  "48h": 48,
 };
 
 export function TimelineClient() {
   const { deviceId, logs, isHydrated } = useBubloo();
-  const [range, setRange] = useState<TimelineRange>("6h");
+  const [range, setRange] = useState<TimelineRange>("24h");
   const [remoteLogs, setRemoteLogs] = useState<TimelineResponse["logs"]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export function TimelineClient() {
         const search = new URLSearchParams({
           device_id: currentDeviceId,
           range,
-          limit: "20",
+          limit: "50",
           offset: "0",
         });
         const response = await fetch(`/api/logs?${search.toString()}`, {

@@ -7,6 +7,13 @@ import {
 } from "../../../lib/bubloo/store";
 import { parseTimelineRange } from "../../../lib/bubloo/time";
 import type { CareLogEntry, TimelineResponse } from "../../../lib/bubloo/types";
+import { CARE_LOG_TYPES } from "../../../lib/domain/types";
+
+const VALID_TYPES = new Set<string>(CARE_LOG_TYPES);
+
+function isValidISOTimestamp(value: string): boolean {
+  return !Number.isNaN(new Date(value).getTime());
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,10 +76,27 @@ export async function POST(request: NextRequest) {
       typeof logCandidate.timestamp === "string" &&
       typeof logCandidate.created_at === "string"
     ) {
+      if (!VALID_TYPES.has(logCandidate.type)) {
+        return NextResponse.json(
+          { error: `Invalid log type. Must be one of: ${CARE_LOG_TYPES.join(", ")}` },
+          { status: 400 },
+        );
+      }
+
+      if (
+        !isValidISOTimestamp(logCandidate.timestamp) ||
+        !isValidISOTimestamp(logCandidate.created_at)
+      ) {
+        return NextResponse.json(
+          { error: "timestamp and created_at must be valid ISO 8601 dates." },
+          { status: 400 },
+        );
+      }
+
       const log: CareLogEntry = {
         id: logCandidate.id,
         device_id: deviceId,
-        type: logCandidate.type,
+        type: logCandidate.type as CareLogEntry["type"],
         timestamp: logCandidate.timestamp,
         amount_ml: logCandidate.amount_ml ?? null,
         note: logCandidate.note ?? null,

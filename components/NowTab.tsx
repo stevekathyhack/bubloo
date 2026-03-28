@@ -1,7 +1,6 @@
 "use client";
 
 import { CurrentStateCard } from "./CurrentStateCard";
-import { QuickActions } from "./QuickActions";
 import { BublooShell } from "./BublooShell";
 import { useBubloo } from "./BublooProvider";
 
@@ -10,13 +9,16 @@ export function NowTab() {
 
   return (
     <BublooShell activeTab="now">
-      <header className="screen-header">
+      <header className="screen-header baby-header">
+        <img
+          src="/baby.jpeg"
+          alt="Harry"
+          className="baby-photo"
+        />
         <h1 className="screen-title">Harry</h1>
       </header>
 
       <CurrentStateCard isHydrated={isHydrated} state={currentState} />
-
-      <QuickActions />
     </BublooShell>
   );
 }

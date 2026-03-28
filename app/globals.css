@@ -117,6 +117,24 @@ button { cursor: pointer; border: none; background: none; }
   opacity: 0.7;
 }
 
+/* ===== BABY PHOTO ===== */
+
+.baby-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.baby-photo {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--surface);
+  box-shadow: var(--shadow);
+  flex-shrink: 0;
+}
+
 /* ===== SCREEN HEADER ===== */
 
 .screen-header {
@@ -223,6 +241,139 @@ button { cursor: pointer; border: none; background: none; }
   color: var(--text-soft);
   font-size: 0.92rem;
   line-height: 1.55;
+}
+
+/* ===== HANDOFF TO SECTION ===== */
+
+.handoff-to-section {
+  position: relative;
+}
+
+.handoff-to-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  font-size: 0.88rem;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.handoff-to-badge:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow);
+}
+
+.handoff-to-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--sky-light), rgba(214, 234, 245, 0.5));
+  border: 2px solid rgba(107, 163, 201, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--sky-deep);
+}
+
+.handoff-to-chevron {
+  color: var(--text-faint);
+  margin-left: 2px;
+}
+
+/* ===== HANDOFF PICKER ===== */
+
+.handoff-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  animation: fade-up 0.2s ease-out;
+}
+
+.handoff-picker-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 8px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.handoff-picker-option:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-glass);
+}
+
+.handoff-picker-option--active {
+  background: var(--sky-deep);
+  color: #ffffff;
+  border-color: var(--sky-deep);
+  box-shadow: 0 4px 14px rgba(74, 125, 158, 0.25);
+}
+
+.handoff-picker-option--active:hover {
+  background: var(--sky);
+  border-color: var(--sky);
+}
+
+.handoff-picker-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.handoff-picker-option:not(.handoff-picker-option--active) .handoff-picker-avatar {
+  background: var(--surface-soft);
+  border-color: var(--border);
+  color: var(--sky-deep);
+}
+
+/* ===== HANDOFF FROM TAG (inside summary card) ===== */
+
+.handoff-from-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+
+.handoff-from-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--cream);
+  border: 1.5px solid var(--cream-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #8b7040;
 }
 
 /* ===== SUMMARY CARDS ===== */
@@ -830,6 +981,18 @@ button { cursor: pointer; border: none; background: none; }
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+/* ===== TIMELINE DAY DIVIDER ===== */
+
+.timeline-day-divider {
+  font-family: var(--font-serif);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  padding: 8px 0 4px;
+  margin-top: 4px;
 }
 
 /* ===== TIMELINE ===== */

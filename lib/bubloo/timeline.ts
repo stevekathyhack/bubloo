@@ -1,4 +1,3 @@
-import { formatRelativeTime } from "./time";
 import type { CareLogEntry, CareLogType } from "./types";
 
 const TYPE_LABELS: Record<CareLogType, string> = {
@@ -28,7 +27,7 @@ export function getTimelineTitle(log: CareLogEntry): string {
   }
 }
 
-export function getTimelineDetail(log: CareLogEntry, now = new Date()): string {
+export function getTimelineDetail(log: CareLogEntry): string {
   if (log.type === "note" && log.note) {
     return log.note;
   }
@@ -38,19 +37,19 @@ export function getTimelineDetail(log: CareLogEntry, now = new Date()): string {
   }
 
   if (log.type === "feeding" && log.amount_ml) {
-    return `Logged ${log.amount_ml} mL ${formatRelativeTime(log.timestamp, now)}.`;
+    return `${log.amount_ml} mL logged.`;
   }
 
   if (log.type === "sleep_start") {
-    return `Fell asleep ${formatRelativeTime(log.timestamp, now)}.`;
+    return "Fell asleep.";
   }
 
   if (log.type === "wake") {
-    return `Awake again ${formatRelativeTime(log.timestamp, now)}.`;
+    return "Woke up.";
   }
 
   if (log.type === "diaper") {
-    return `A fresh change was logged ${formatRelativeTime(log.timestamp, now)}.`;
+    return "Diaper changed.";
   }
 
   return "A small note for the next caregiver.";
