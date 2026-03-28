@@ -1,0 +1,32 @@
+[
+  {
+    "id": "seed-sleep-start-1",
+    "device_id": "00000000-0000-4000-8000-000000000001",
+    "type": "sleep_start",
+    "timestamp": "2026-03-28T19:38:38.164Z",
+    "created_at": "2026-03-28T19:38:38.164Z"
+  },
+  {
+    "id": "seed-note-1",
+    "device_id": "00000000-0000-4000-8000-000000000001",
+    "type": "note",
+    "timestamp": "2026-03-28T19:33:38.164Z",
+    "note": "A little fussy before falling asleep",
+    "created_at": "2026-03-28T19:33:38.164Z"
+  },
+  {
+    "id": "seed-feeding-1",
+    "device_id": "00000000-0000-4000-8000-000000000001",
+    "type": "feeding",
+    "timestamp": "2026-03-28T19:23:38.164Z",
+    "amount_ml": 120,
+    "created_at": "2026-03-28T19:23:38.164Z"
+  },
+  {
+    "id": "seed-diaper-1",
+    "device_id": "00000000-0000-4000-8000-000000000001",
+    "type": "diaper",
+    "timestamp": "2026-03-28T19:08:38.164Z",
+    "created_at": "2026-03-28T19:08:38.164Z"
+  }
+]

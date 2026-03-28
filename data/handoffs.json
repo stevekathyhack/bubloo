@@ -1,0 +1,22 @@
+[
+  {
+    "id": "a54c0c35-bcd0-4964-8b7b-cfc638051e44",
+    "device_id": "00000000-0000-4000-8000-000000000001",
+    "headline": "Bubloo update",
+    "summary_text": "A recent feed was logged, a diaper change was logged, and baby is now asleep. A recent note mentioned a little fussy before falling asleep.",
+    "keep_in_mind_today": [
+      "A little fussy before falling asleep",
+      "Sleeping for about 25m so far.",
+      "Last feed was 40m ago."
+    ],
+    "why_this_summary": [
+      "Last feed: 40m ago",
+      "Sleep started: 25m ago",
+      "Recent note: a little fussy before falling asleep"
+    ],
+    "suggested_next_step": "Let baby rest for now, and do a calm check-in when they wake.",
+    "copy_text": "Bubloo update\nA recent feed was logged, a diaper change was logged, and baby is now asleep. A recent note mentioned a little fussy before falling asleep.\n\nWhat to keep in mind today:\n- A little fussy before falling asleep\n- Sleeping for about 25m so far.\n- Last feed was 40m ago.\n\nSuggested next step:\nLet baby rest for now, and do a calm check-in when they wake.\n\nWhy this summary:\n- Last feed: 40m ago\n- Sleep started: 25m ago\n- Recent note: a little fussy before falling asleep",
+    "source_log_count": 7,
+    "created_at": "2026-03-28T20:01:35.610Z"
+  }
+]
