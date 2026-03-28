@@ -20,7 +20,7 @@ Existing logging apps can feel heavy, guilt-inducing, and overly focused on comp
 
 ## 3. Goals
 
-- Let parents record feeding, sleep, diaper, or a note in 5 to 10 seconds
+- Let parents record feeding, sleep start, wake, diaper, or a note in 5 to 10 seconds
 - Turn short or incomplete logs into a calm current-state summary
 - Generate a handoff summary that a second caregiver can understand in under 10 seconds
 - Make it feel safe to keep using the app even when records are sparse or inconsistent
@@ -80,7 +80,29 @@ Bubloo differs from classic baby trackers in four ways:
 - Frames output around "current state" rather than charts or stats
 - Uses calm, non-judgmental copy throughout the experience
 
-## 9. Core User Stories
+## 9. Core Product Features
+
+### Feature 1: Quick Log
+
+- Fast entry for feeding, sleep start, wake, diaper, and note
+- Built for one-thumb use and 5 to 10 second interactions
+
+### Feature 2: Current State Card
+
+- A calm summary of the baby's current known state
+- Prioritizes latest feed, latest sleep start or wake, latest diaper, recent notes, and reassurance copy
+
+### Feature 3: AI Handoff Summary
+
+- Generates a handoff card for the next caregiver
+- Highlights the most relevant recent events, watch-for context, and suggested next step
+
+### Feature 4: Calm Copy System
+
+- Shapes all UI and summary text to reduce pressure and guilt
+- Prevents the product from feeling like a tracking or medical app
+
+## 10. Core User Stories
 
 - As a parent, I want to log feeding, sleep, or a diaper in about 5 seconds
 - As a parent, I want to understand the baby's current state at a glance
@@ -88,19 +110,22 @@ Bubloo differs from classic baby trackers in four ways:
 - As a user who missed some logs, I want the app to gently help me continue without guilt
 - As a user who leaves a free-form note, I want it reflected in the handoff summary
 
-## 10. MVP Scope
+## 11. MVP Scope
 
 ### In Scope
 
 - Landing page explaining the Bubloo value proposition
 - Quick log UI for:
   - Feeding
-  - Sleep
+  - Sleep start
+  - Wake
   - Diaper
   - Note
 - Current state card showing:
   - Last feed
-  - Last sleep or wake
+  - Last sleep start
+  - Last wake
+  - Whether the baby is likely asleep now
   - Most recent diaper
   - Recent notes
   - Calm reassurance copy
@@ -109,17 +134,18 @@ Bubloo differs from classic baby trackers in four ways:
   - Recent timeline
   - Watch-for items
   - Suggested next step
+  - On-screen handoff card readable in one view
 - Seed data or sample flow for demo use without accounts
 
 ### Out of Scope
 
 - Account systems and caregiver permissions
-- External sharing integrations
+- External sharing integrations beyond optional copy-to-clipboard
 - Long-term baby statistics
 - Smart reminders and alert engines
 - Medical escalation logic
 
-## 11. Key Screens
+## 12. Key Screens
 
 ### Landing Page
 
@@ -129,18 +155,40 @@ Bubloo differs from classic baby trackers in four ways:
 
 ### Home / Current State
 
-- Current state at a glance
-- Last feed, sleep, and diaper
-- Recent note snippet
-- Calm reassurance line
-- Quick log CTA
-- Create handoff CTA
+Home should be ordered around the four core features and support a fast caregiver check-in.
+
+Recommended information architecture:
+
+1. Header
+   - Bubloo title
+   - Short reassuring subcopy
+2. Current State Card
+   - Current state at a glance
+   - Last feed
+   - Last sleep start
+   - Last wake
+   - Last diaper
+   - Recent note snippet
+   - Calm reassurance line
+3. Quick Log Actions
+   - Feed
+   - Sleep
+   - Wake
+   - Diaper
+   - Note
+4. Recent Timeline Preview
+   - Last 3 to 5 key events
+5. Handoff CTA
+   - `Create handoff`
+   - Short copy explaining that this is enough for the next caregiver
+
+Sparse or empty states should still feel calm and usable, not blank or punitive.
 
 ### Quick Log
 
-- Type: feeding, sleep, diaper, or note
+- Type: feeding, sleep start, wake, diaper, or note
 - Timestamp with default set to now
-- Optional amount or duration
+- Optional amount for feeding
 - One-line note
 - Minimal taps to save
 
@@ -150,43 +198,51 @@ Bubloo differs from classic baby trackers in four ways:
 - Recent timeline
 - Watch for
 - Suggested next step
-- Shareable card-style layout
+- On-screen card layout readable in under 10 seconds
+- Optional copy-to-clipboard action
 
-## 12. Functional Requirements
+## 13. Functional Requirements
 
 ### FR1. Quick Log
 
-- Users must be able to create `feeding`, `sleep`, `diaper`, and `note` entries
+- Users must be able to create `feeding`, `sleep_start`, `wake`, `diaper`, and `note` entries
 - Each entry must be savable with minimal required input
 - Timestamp should default to the current time
-- Amount or duration should remain optional
+- Feeding amount should remain optional
+- Sleep duration may be inferred by the system when `sleep_start` and `wake` are paired
 
 ### FR2. Current State Summary
 
-- The system must summarize the current state from recent records
+- The system must summarize the current state from logs in the last 6 hours
 - The summary must still work when some data is missing
+- The summary should prioritize the latest known feed, sleep start, wake, diaper, and recent notes
+- The system should avoid guessing unknown facts and summarize only what is supported by logs
 - The output should be primarily sentence-based or card-based, not a numeric table
 
 ### FR3. Handoff Summary
 
-- The system must generate a caregiver handoff summary from recent records
+- The system must generate a caregiver handoff summary from logs in the last 8 hours
+- The summary must include up to 5 key events in the recent timeline
 - The summary must include the latest feed, recent sleep context, recent diaper context, notes, watch-for items, and a suggested next step
 - Free-form notes must influence the summary when present
+- The handoff summary should be readable on a single mobile screen without external sharing
+- The summary should remain useful even when only 2 to 3 logs are available
 
 ### FR4. Calm Tone
 
 - All product copy must avoid guilt, comparison, and warning-heavy language
 - Missing data states should use gentle guidance instead of negative error framing
+- Summary output must avoid diagnostic or prescriptive medical language
 
 ### FR5. Demo Usability
 
 - The product must be usable immediately without account creation
 - A seeded scenario must allow a clean demo flow
 
-## 13. Data Model
+## 14. Data Model
 
 ```ts
-type CareLogType = "feeding" | "sleep" | "diaper" | "note";
+type CareLogType = "feeding" | "sleep_start" | "wake" | "diaper" | "note";
 
 interface CareLogEntry {
   id: string;
@@ -199,8 +255,10 @@ interface CareLogEntry {
 
 interface CurrentBabyState {
   lastFeed?: CareLogEntry;
-  lastSleep?: CareLogEntry;
+  lastSleepStart?: CareLogEntry;
+  lastWake?: CareLogEntry;
   lastDiaper?: CareLogEntry;
+  isLikelySleeping?: boolean;
   recentNotes: CareLogEntry[];
   reassuranceText: string;
 }
@@ -213,15 +271,16 @@ interface HandoffSummary {
 }
 ```
 
-## 14. AI / Codex Responsibilities
+## 15. AI / Codex Responsibilities
 
 AI is not a general chatbot in Bubloo. It is the summary engine.
 
 AI should:
 
-- Read sparse care logs and generate a current-state summary
-- Generate caregiver handoff summaries
+- Read sparse care logs and generate a current-state summary using the last 6 hours of logs
+- Generate caregiver handoff summaries using the last 8 hours of logs
 - Pull key watch-for details from free-form notes
+- Highlight only known information rather than inventing missing context
 - Rewrite outputs in a calm, low-anxiety tone
 
 AI should not:
@@ -231,7 +290,7 @@ AI should not:
 - Give medical guidance
 - Predict long-term patterns
 
-## 15. Tone and Copy System
+## 16. Tone and Copy System
 
 The product should consistently reduce pressure and guilt.
 
@@ -249,7 +308,7 @@ Copy to avoid:
 - "Abnormal"
 - "Needs correction"
 
-## 16. Demo Narrative
+## 17. Demo Narrative
 
 Problem:
 
@@ -264,15 +323,16 @@ Demo flow:
 1. Parent A logs a feeding event
 2. Parent A logs a diaper change
 3. Parent A adds a note: "A little fussy before falling asleep"
-4. The home screen shows the current state card
-5. The user taps `Create handoff`
-6. Parent B reads and understands the summary in under 10 seconds
+4. Parent A taps `Sleep`
+5. The home screen shows the current state card
+6. The user taps `Create handoff`
+7. Parent B reads and understands the summary in under 10 seconds
 
 Example summary:
 
 "Bubloo update: last fed 40 minutes ago, diaper changed recently, baby fell asleep after being a little fussy. Watch for: may wake soon, keep an eye on fussiness. Next step: if awake, offer soothing before next feed."
 
-## 17. Success Metrics
+## 18. Success Metrics
 
 Hackathon demo success:
 
@@ -282,17 +342,21 @@ Hackathon demo success:
 - The product still feels useful with only a few records
 - Observers react with "this is more than a tracker"
 
-## 18. Acceptance Criteria
+## 19. Acceptance Criteria
 
-- Quick log entry works for all four log types
+- Quick log entry works for all five log types
 - A current state summary is shown
 - A handoff summary can be generated
 - Free-form notes are reflected in the output
 - The app behaves gracefully with missing data
+- With only 2 to 3 logs, the app still produces a natural summary
+- The handoff card fits in a single mobile view
+- Summary output does not include diagnostic or medical advice
+- Missing data states use gentle reassurance copy rather than warning language
 - The demo works without external integrations
 - The experience feels fast and mobile-friendly
 
-## 19. Risks and Mitigations
+## 20. Risks and Mitigations
 
 ### Risk: Feels like a normal baby tracker
 
@@ -324,7 +388,7 @@ Mitigation:
 - Ban diagnostic or prescriptive medical language
 - Keep suggestions framed as caregiver context, not treatment advice
 
-## 20. Build Plan for Ralphthon
+## 21. Build Plan for Ralphthon
 
 - Landing page
 - Quick log UI
@@ -334,8 +398,8 @@ Mitigation:
 - Basic tests
 - Demo seed data and demo script
 
-## 21. Open Questions
+## 22. Open Questions
 
 - Should the first demo position Bubloo as a mobile web app only, or as a future multi-device family tool?
-- Should handoff output be purely on-screen in MVP, or include a simple share/export action?
+- Should MVP include a simple copy-to-clipboard action for the handoff card?
 - How much structured detail should the quick log capture before it becomes too heavy?
