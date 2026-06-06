@@ -1,5 +1,10 @@
 Bubloo 👶
 
+<p align="center">
+  <img src="bubloo_overview_1.png" width="280" alt="Bubloo quick log screen">
+  <img src="bubloo_overview_2.png" width="280" alt="Bubloo handoff screen">
+</p>
+
 A calm handoff app for parents, grandparents, and caregivers.
 
 Most baby tracking apps focus on recording everything.
